@@ -55,7 +55,7 @@ export default function TabIG() {
               <button
                 type="button"
                 onClick={() => copy(IG_POST_COPY, setCopiedPost)}
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
+                className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
               >
                 {copiedPost ? "Copied!" : "Copy"}
               </button>
@@ -74,7 +74,7 @@ export default function TabIG() {
               <button
                 type="button"
                 onClick={() => copy(IG_STORY_HASHTAGS, setCopiedStoryHashtags)}
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
+                className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
               >
                 {copiedStoryHashtags ? "Copied!" : "Copy hashtags"}
               </button>

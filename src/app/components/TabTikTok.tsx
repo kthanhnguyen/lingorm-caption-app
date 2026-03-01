@@ -47,7 +47,7 @@ export default function TabTikTok() {
             <button
               type="button"
               onClick={copy}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
+              className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
             >
               {copied ? "Copied!" : "Copy"}
             </button>
