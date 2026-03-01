@@ -160,12 +160,12 @@ export default function TabX() {
               Before the show
             </p>
             <p>#LinglingKwong #OrmKornnaphat</p>
-            <p>#LingOrm #DiorAW26 #Dior</p>
+            <p>#LingOrm #Dior #DiorAW26 #PFW</p>
             <button
               type="button"
               onClick={async () => {
                 const tags =
-                  "#LinglingKwong #OrmKornnaphat\n#LingOrm #DiorAW26 #Dior";
+                  "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW";
                 try {
                   await navigator.clipboard.writeText(tags);
                   setCopiedBeforeTags(true);

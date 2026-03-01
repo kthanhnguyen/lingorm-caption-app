@@ -3,7 +3,11 @@ import Groq from "groq-sdk";
 
 const GROQ_KEYS = [
   process.env.GROQ_KEY_1, process.env.GROQ_KEY_2, process.env.GROQ_KEY_3,
-  process.env.GROQ_KEY_4, process.env.GROQ_KEY_5
+  process.env.GROQ_KEY_4, process.env.GROQ_KEY_5, process.env.GROQ_KEY_6,
+  process.env.GROQ_KEY_7, process.env.GROQ_KEY_8, process.env.GROQ_KEY_9, 
+  process.env.GROQ_KEY_10, process.env.GROQ_KEY_11, process.env.GROQ_KEY_12, 
+  process.env.GROQ_KEY_13, process.env.GROQ_KEY_14, process.env.GROQ_KEY_15,
+  process.env.GROQ_KEY_16,
 ].filter(Boolean);
 
 // Nâng cấp Ma trận từ vựng lên thêm 20% để đảm bảo AI có nhiều "nguyên liệu" hơn
