@@ -1,76 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// 1. Danh sách 5 API Keys của bạn (Cho vào file .env)
+const GROQ_KEYS = [
+  process.env.GROQ_KEY_1,
+  process.env.GROQ_KEY_2,
+  process.env.GROQ_KEY_3,
+  process.env.GROQ_KEY_4,
+  // process.env.GROQ_KEY_5,
+].filter(Boolean); // Lọc bỏ các key trống
 
-// --- KHO DỮ LIỆU KHỔNG LỒ (6.25 TRIỆU TỔ HỢP) ---
-const hooks = [
-  "At Paris Fashion Week,", "Gracing the Dior Autumn Winter 2026 showcase,", "In the heart of the Dior atelier,",
-  "Capturing the essence of couture,", "Defining a new sartorial era,", "Commanding the front row in Paris,",
-  "A visionary moment unfolds as", "Against the backdrop of Dior's legacy,", "Elevating the seasonal narrative,",
-  "Amidst the grandeur of the Dior runway,", "As the lights dim in Paris,", "Marking a definitive fashion milestone,"
-];
-
-const actions = [
-  "commands", "anchors", "redefines", "manifests", "interprets", "elevates", "captivates", "transforms", 
-  "curates", "projects", "sculpts", "articulates", "heralds", "symbolizes", "portrays", "illustrates",
-  "reimagines", "orchestrates", "anchors", "defines"
-];
-
-const vibes = [
-  "architectural", "avant-garde", "ethereal", "minimalist", "quintessential", "visionary", "majestic", 
-  "sculptural", "understated", "opulent", "aristocratic", "fluid", "heritage-rich", "transcendental", 
-  "modernist", "atelier-crafted", "couture-focused", "boldly-refined", "timelessly-chic"
-];
-
-const endings = [
-  "A definitive masterclass in style.", "Heritage reimagined for a new generation.", "Sartorial excellence in its purest form.",
-  "The pinnacle of contemporary luxury.", "A visionary narrative of craft.", "Pure couture elegance redefined.",
-  "The dawn of a new fashion legacy.", "Grace and heritage intertwined.", "A masterpiece of modern tailoring.",
-  "Setting the gold standard for luxury."
-];
+// 2. Bộ từ vựng (Fallback Engine)
+const hooks = ["At Paris Fashion Week,", "Gracing Dior AW26,", "In the Dior atelier,", "Commanding the front row,", "A new era unfolds as"];
+const actions = ["redefines", "manifests", "anchors", "elevates", "transforms"];
+const vibes = ["architectural", "avant-garde", "ethereal", "minimalist", "quintessential"];
+const endings = ["A style masterclass.", "Heritage reimagined.", "Pure couture.", "The gold standard."];
 
 export async function POST() {
+  // Chọn ngẫu nhiên bộ khung trước
   const h = hooks[Math.floor(Math.random() * hooks.length)];
   const a = actions[Math.floor(Math.random() * actions.length)];
   const v = vibes[Math.floor(Math.random() * vibes.length)];
   const e = endings[Math.floor(Math.random() * endings.length)];
+  const fallbackCaption = `${h} LingOrm ${a} a ${v} silhouette for Dior Autumn Winter 2026 as global Brand Ambassadors. ${e}`;
+
+  // 3. Chọn ngẫu nhiên 1 Key trong mảng 5 Key để dùng
+  const randomKey = GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)];
+  
+  if (!randomKey) {
+     return NextResponse.json({ success: true, caption: fallbackCaption, source: "Direct_Logic" });
+  }
+
+  const groq = new Groq({ apiKey: randomKey });
 
   try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { 
-          role: "system", 
-          content: "You are a minimalist fashion editor. Write ONE short, complete sentence only. No storytelling." 
-        },
-        { 
-          role: "user", 
-          content: `Task: Create a 25-word caption for LingOrm at Dior AW26. 
-          Use exactly this start: "${h}" 
-          Include: "${a}", "${v}", and "Dior Brand Ambassadors".
-          End with: "${e}"
-          Constraint: Must be a COMPLETE sentence. Do not cut off.` 
-        }
+        { role: "system", content: "You are a Vogue editor. Rewrite briefly. Subject: LingOrm (models)." },
+        { role: "user", content: fallbackCaption }
       ],
-      model: "llama-3.1-8b-instant",
-      temperature: 0.7, // Giảm xuống 0.7 để AI bớt "luyên thuyên"
-      max_tokens: 80,   // Tăng lên 80 để không bị cắt nửa chừng
-      frequency_penalty: 1.0,
+      model: "llama-3.1-8b-instant", // Model này trâu nhất cho 100k request
+      temperature: 0.8,
+      max_tokens: 50,
     });
 
-    let caption = chatCompletion.choices[0]?.message?.content?.trim() || "";
+    const aiResult = chatCompletion.choices[0]?.message?.content?.trim();
     
-    // Xử lý hậu kỳ: Nếu AI vẫn cố tình viết quá dài hoặc chưa xong (không có dấu chấm cuối)
-    if (!caption.endsWith('.') && !caption.endsWith('!')) {
-       // Nếu bị cắt cụt, ta dùng luôn câu Fallback cho đẹp
-       caption = `${h} LingOrm ${a} a ${v} aesthetic for Dior Autumn Winter 2026 as global Brand Ambassadors. ${e}`;
-    }
+    // Kiểm tra chất lượng AI trả về (Tránh bị cắt chữ)
+    if (!aiResult || aiResult.length < 40) throw new Error("AI incomplete");
 
-    return NextResponse.json({ success: true, caption });
+    return NextResponse.json({ success: true, caption: aiResult, source: "AI" });
 
   } catch (error) {
-    // Logic_Engine (Fallback bất tử)
-    const manualCaption = `${h} LingOrm ${a} a ${v} silhouette at Paris Fashion Week for Dior Autumn Winter 2026 as global Brand Ambassadors. ${e}`;
-    return NextResponse.json({ success: true, caption: manualCaption });
+    // 4. Nếu sập (Rate limit 429), trả về câu Fallback cực nhanh
+    return NextResponse.json({ success: true, caption: fallbackCaption, source: "Fallback" });
   }
 }
