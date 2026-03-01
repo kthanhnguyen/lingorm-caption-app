@@ -153,7 +153,7 @@ export default function DownloadImages() {
       )}
 
       <p className="mt-4 text-center text-[10px] uppercase tracking-[0.2em] text-white/80">
-        Design by Kiu
+        Designed images by Kiu
       </p>
     </div>
   );

@@ -9,7 +9,7 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
     })
   : null;
 
-// Only use keys that exist in env. GROQ_KEYS="key1,key2,..." or GROQ_KEY_1, GROQ_KEY_2, ... (e.g. 26 keys).
+// Only use keys that exist in env. GROQ_KEYS="key1,key2,..." or GROQ_KEY_1..GROQ_KEY_N (e.g. 444 keys). Vercel free + Redis + Llama: performance and cache okay.
 function getGroqKeys(): string[] {
   const fromList = process.env.GROQ_KEYS;
   if (fromList && typeof fromList === "string") {
@@ -19,7 +19,7 @@ function getGroqKeys(): string[] {
       .filter((k): k is string => typeof k === "string" && k.length > 0);
   }
   const keys: string[] = [];
-  for (let i = 1; i <= 450; i++) {
+  for (let i = 1; i <= 500; i++) {
     const v = process.env[`GROQ_KEY_${i}`];
     if (typeof v === "string" && v.trim().length > 0) keys.push(v.trim());
   }
@@ -75,9 +75,11 @@ const endings = [
 
 // --- Performance for high concurrency ---
 // Groq ~30 RPM per key. N keys → ~30*N RPM. We try 2 keys per request then fallback.
+// Scale note: 2000 concurrent → Vercel burst ~1000/10s (rest may 503); 1M req/day → need paid Vercel + paid Redis (free: ~1M invocations/month, ~500k Redis commands/month).
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const CACHE_MAX_SIZE = 1000;
+const CACHE_MAX_SIZE = 5000; // larger = more RAM hits, fewer Redis/Groq at 1M/day
 const MAX_KEYS_TO_TRY = 2; // Try at most 2 keys then fallback → bounded latency
+const PRUNE_PROBABILITY = 0.1; // only run prune ~10% of writes → less CPU, cache still bounded
 
 function pruneCache() {
   if (responseCache.size <= CACHE_MAX_SIZE) return;
@@ -91,20 +93,20 @@ function pruneCache() {
 export async function POST() {
   const now = Date.now();
 
-  // 1. Tạo sẵn câu dự phòng (Tốc độ 0ms)
+  // 1. Create fallback sentence (Speed 0ms)
   const h = hooks[Math.floor(Math.random() * hooks.length)];
   const a = actions[Math.floor(Math.random() * actions.length)];
   const v = vibes[Math.floor(Math.random() * vibes.length)];
   const e = endings[Math.floor(Math.random() * endings.length)];
   const seedText = `${h} LingOrm ${a} a ${v} silhouette for Dior Autumn Winter 2026. ${e}`;
 
-  // 2. Kiểm tra Cache RAM (Tốc độ 0ms)
+  // 2. Check Cache RAM (Speed 0ms)
   const ramCached = responseCache.get(seedText);
   if (ramCached && now - ramCached.ts < CACHE_TTL_MS) {
     return NextResponse.json({ success: true, caption: ramCached.caption, source: "RAM" });
   }
 
-  // 3. Kiểm tra Redis (shared cache across Vercel instances)
+  // 3. Check Redis (shared cache across Vercel instances)
   if (redis) {
     try {
       const redisVal = await redis.get(seedText);
@@ -117,9 +119,9 @@ export async function POST() {
     }
   }
 
-  // 4. Gọi AI chỉ khi có ít nhất 1 key trong env (e.g. 26 keys → dùng đúng 26)
+  // 4. Call AI only when there is at least 1 key in env (444 keys → use exactly N keys)
   if (GROQ_KEYS.length === 0) {
-    pruneCache();
+    if (Math.random() < PRUNE_PROBABILITY) pruneCache();
     responseCache.set(seedText, { caption: seedText, ts: now });
     if (redis) { try { await redis.set(seedText, seedText, { ex: 3600 }); } catch { /* ignore */ } }
     return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
@@ -149,7 +151,7 @@ export async function POST() {
       const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, '');
 
       if (aiResult && aiResult.length > 20) {
-        pruneCache();
+        if (Math.random() < PRUNE_PROBABILITY) pruneCache();
         responseCache.set(seedText, { caption: aiResult, ts: now });
         if (redis) { try { await redis.set(seedText, aiResult, { ex: 86400 }); } catch { /* ignore */ } }
         return NextResponse.json({ success: true, caption: aiResult, source: "AI" });
@@ -160,7 +162,7 @@ export async function POST() {
   }
 
   // 5. Fallback: cache it so we don't retry Groq for same seed on every request
-  pruneCache();
+  if (Math.random() < PRUNE_PROBABILITY) pruneCache();
   responseCache.set(seedText, { caption: seedText, ts: now });
   if (redis) { try { await redis.set(seedText, seedText, { ex: 3600 }); } catch { /* ignore */ } } // 1h for fallback
   return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
