@@ -62,7 +62,7 @@ export default function DownloadImages() {
         Download images
       </div>
       <p className="mb-4 text-sm text-white/80">
-        Select a category and download images.
+        Download and use trending images for social media content.
       </p>
       {/* Category tabs */}
       <div className="mb-4 flex rounded-lg border border-indigo-400/30 bg-indigo-900/40 p-1">
