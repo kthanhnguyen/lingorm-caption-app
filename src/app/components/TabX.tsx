@@ -9,7 +9,7 @@ const TAG_PRESETS = [
   {
     id: "before",
     label: "Before 02 MAR 2026 3:30 PM BKK TIME",
-    tags: "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW",
+    tags: "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm",
     notes: "",
   },
   {
