@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 const CARD_CLASS =
