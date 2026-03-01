@@ -5,29 +5,59 @@ import { useEffect, useState } from "react";
 const CARD_CLASS =
   "bg-gradient-to-br from-indigo-800 via-indigo-900 to-purple-900 border border-indigo-400/30 shadow-[0_0_35px_rgba(99,102,241,0.4)] rounded-xl text-white p-6";
 
+const TAG_PRESETS = [
+  {
+    id: "before",
+    label: "Before 02 MAR 2026 3:30 PM BKK TIME",
+    tags: "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW",
+    notes: "",
+  },
+  {
+    id: "airport",
+    label: "Airport - 02 MAR 2026 3:30 PM BKK TIME",
+    tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook",
+    notes: "",
+  },
+  {
+    id: "airport-rank-1",
+    label: "Airport - 02 MAR 2026 3:30 PM BKK TIME - After Rank #1",
+    tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook\n#LinglingKwong #OrmKornnaphat #LingOrm\n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm",
+    notes: "After hashtag #LingOrmDiorAW26APTLook rank 1 on X use this preset.",
+  },
+  {
+    id: "during",
+    label: "03 MAR 2026",
+    tags: "#LingOrmDiorAW26 #DiorAW26\n#LinglingKwong #OrmKornnaphat #PFW",
+    notes: "",
+  },
+] as const;
+
+type TagPresetId = (typeof TAG_PRESETS)[number]["id"];
+
 export default function TabX() {
   const [caption, setCaption] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
-  const [copiedBeforeTags, setCopiedBeforeTags] = useState(false);
-  const [copiedDuringTags, setCopiedDuringTags] = useState(false);
-  const [copiedCaptionWithBefore, setCopiedCaptionWithBefore] = useState(false);
-  const [copiedCaptionWithDuring, setCopiedCaptionWithDuring] = useState(false);
+  const [selectedTagPreset, setSelectedTagPreset] = useState<TagPresetId>(TAG_PRESETS[0].id);
+  const [copiedTags, setCopiedTags] = useState(false);
+  const [copiedCaptionWithTags, setCopiedCaptionWithTags] = useState(false);
 
-  const copyCaptionWithTags = async (
-    hashtags: string,
-    setCopied: (value: boolean) => void
-  ) => {
-    if (!caption) return;
-    const text = `${caption}\r\n\r\n${hashtags}`;
+  const selectedPreset = TAG_PRESETS.find((p) => p.id === selectedTagPreset) ?? TAG_PRESETS[0];
+
+  const copyTags = async (tags: string, setCopied: (v: boolean) => void) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(tags);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
       // ignore
     }
+  };
+
+  const copyCaptionWithTagsHandler = async () => {
+    if (!caption) return;
+    await copyTags(`${caption}\r\n\r\n${selectedPreset.tags}`, setCopiedCaptionWithTags);
   };
 
   const generateCaption = async () => {
@@ -154,55 +184,40 @@ export default function TabX() {
         <div className="mb-3 text-[16px] font-bold uppercase tracking-[0.18em] text-white">
           Tags
         </div>
-        <div className="grid grid-cols-1 gap-4 text-xs text-white sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.18em] text-white">
-              Before the show
-            </p>
-            <p>#LinglingKwong #OrmKornnaphat</p>
-            <p>#LingOrm #Dior #DiorAW26 #PFW</p>
-            <button
-              type="button"
-              onClick={async () => {
-                const tags =
-                  "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW";
-                try {
-                  await navigator.clipboard.writeText(tags);
-                  setCopiedBeforeTags(true);
-                  setTimeout(() => setCopiedBeforeTags(false), 1500);
-                } catch {
-                  // ignore
-                }
-              }}
-              className="mt-1 inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-2.5 py-1 text-[12px] font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
-            >
-              {copiedBeforeTags ? "Copied tags" : "Copy tags"}
-            </button>
+        <p className="mb-4 text-sm text-white/80">
+          Choose a preset below to copy hashtags for your post.
+        </p>
+        <div className="space-y-3">
+          <label className="block text-[12px] font-semibold uppercase tracking-[0.18em] text-white">
+            Preset
+          </label>
+          <select
+            value={selectedTagPreset}
+            onChange={(e) => setSelectedTagPreset(e.target.value as TagPresetId)}
+            className="w-full rounded-lg border border-gray-300 bg-white/90 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            {TAG_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          <div className="rounded-lg border border-white/20 bg-white/5 p-3 text-xs text-white/90 whitespace-pre-line">
+            {selectedPreset.tags}
           </div>
-          <div className="space-y-2">
-            <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.18em] text-white">
-              During the show
-            </p>
-            <p>#LingOrmDiorAW26 #DiorAW26</p>
-            <p>#LinglingKwong #OrmKornnaphat #PFW</p>
-            <button
-              type="button"
-              onClick={async () => {
-                const tags =
-                  "#LingOrmDiorAW26 #DiorAW26\n#LinglingKwong #OrmKornnaphat #PFW";
-                try {
-                  await navigator.clipboard.writeText(tags);
-                  setCopiedDuringTags(true);
-                  setTimeout(() => setCopiedDuringTags(false), 1500);
-                } catch {
-                  // ignore
-                }
-              }}
-              className="mt-1 inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-2.5 py-1 text-[12px] font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
-            >
-              {copiedDuringTags ? "Copied tags" : "Copy tags"}
-            </button>
-          </div>
+          {selectedPreset.notes ? (
+            <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-xs text-amber-100">
+              <p className="mb-1 font-semibold uppercase tracking-wider text-amber-200/90">Notes</p>
+              <p className="text-white/90">{selectedPreset.notes}</p>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => copyTags(selectedPreset.tags, setCopiedTags)}
+            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
+          >
+            {copiedTags ? "Copied tags" : "Copy tags"}
+          </button>
         </div>
       </div>
 
@@ -216,34 +231,20 @@ export default function TabX() {
           <p className="text-white/90">Your caption</p>
           <p className="text-white/50 text-xs mt-1">(blank line)</p>
           <p className="text-white/90 mt-1">Hashtags</p>
-          <p className="text-[11px] text-white/60 mt-2">Each button below copies caption + one set of hashtags in this order.</p>
+          <p className="text-[11px] text-white/60 mt-2">Uses the preset selected in the Tags card. Copy caption + hashtags in this order.</p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-3">
+          <p className="text-xs text-white/80">Preset: <strong>{selectedPreset.label}</strong></p>
+          {selectedPreset.notes ? (
+            <p className="text-xs text-amber-100/90 italic">Note: {selectedPreset.notes}</p>
+          ) : null}
           <button
             type="button"
             disabled={!caption || loading}
-            onClick={() =>
-              copyCaptionWithTags(
-                "#LinglingKwong #OrmKornnaphat\r\n#LingOrm #DiorAW26 #Dior",
-                setCopiedCaptionWithBefore
-              )
-            }
-            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={copyCaptionWithTagsHandler}
+            className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {copiedCaptionWithBefore ? "Copied!" : "Copy"}
-          </button>
-          <button
-            type="button"
-            disabled={!caption || loading}
-            onClick={() =>
-              copyCaptionWithTags(
-                "#LingOrmDiorAW26 #DiorAW26\r\n#LinglingKwong #OrmKornnaphat #PFW",
-                setCopiedCaptionWithDuring
-              )
-            }
-            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {copiedCaptionWithDuring ? "Copied!" : "Copy"}
+            {copiedCaptionWithTags ? "Copied!" : "Copy caption + tags"}
           </button>
         </div>
       </div>

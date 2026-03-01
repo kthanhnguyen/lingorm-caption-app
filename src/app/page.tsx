@@ -6,8 +6,10 @@ import TabX from "./components/TabX";
 import TabIG from "./components/TabIG";
 import TabTikTok from "./components/TabTikTok";
 import TabFacebook from "./components/TabFacebook";
+import DownloadImages from "./components/DownloadImages";
 
 export default function Home() {
+  const [mainPage, setMainPage] = useState<"generate" | "download">("generate");
   const [activeTab, setActiveTab] = useState<"x" | "ig" | "tiktok" | "facebook">("x");
 
   return (
@@ -34,6 +36,36 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Main menu: Generate | Download images — page-level nav */}
+        <nav className="flex border-b border-white/20" aria-label="Main">
+          <button
+            type="button"
+            onClick={() => setMainPage("generate")}
+            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              mainPage === "generate"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white"
+            }`}
+          >
+            Generate
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainPage("download")}
+            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              mainPage === "download"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white"
+            }`}
+          >
+            Download images
+          </button>
+        </nav>
+
+        {mainPage === "download" && <DownloadImages />}
+
+        {mainPage === "generate" && (
+          <>
         {/* Tabs: X (Twitter) | IG | TikTok | Facebook */}
         <div className="flex rounded-lg border border-indigo-400/30 bg-indigo-900/40 p-1">
           <button
@@ -86,6 +118,8 @@ export default function Home() {
         {activeTab === "ig" && <TabIG />}
         {activeTab === "tiktok" && <TabTikTok />}
         {activeTab === "facebook" && <TabFacebook />}
+          </>
+        )}
 
         {/* Footer — outside tabs */}
         <p className="text-center text-[10px] uppercase tracking-[0.2em] text-white">
