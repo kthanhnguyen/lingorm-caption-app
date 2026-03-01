@@ -9,14 +9,23 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
     })
   : null;
 
-const GROQ_KEYS = [
-  process.env.GROQ_KEY_1, process.env.GROQ_KEY_2, process.env.GROQ_KEY_3,
-  process.env.GROQ_KEY_4, process.env.GROQ_KEY_5, process.env.GROQ_KEY_6,
-  process.env.GROQ_KEY_7, process.env.GROQ_KEY_8, process.env.GROQ_KEY_9,
-  process.env.GROQ_KEY_10, process.env.GROQ_KEY_11, process.env.GROQ_KEY_12,
-  process.env.GROQ_KEY_13, process.env.GROQ_KEY_14, process.env.GROQ_KEY_15,
-  process.env.GROQ_KEY_16,
-].filter(Boolean);
+// Only use keys that exist in env. GROQ_KEYS="key1,key2,..." or GROQ_KEY_1, GROQ_KEY_2, ... (e.g. 26 keys).
+function getGroqKeys(): string[] {
+  const fromList = process.env.GROQ_KEYS;
+  if (fromList && typeof fromList === "string") {
+    return fromList
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k): k is string => typeof k === "string" && k.length > 0);
+  }
+  const keys: string[] = [];
+  for (let i = 1; i <= 100; i++) {
+    const v = process.env[`GROQ_KEY_${i}`];
+    if (typeof v === "string" && v.trim().length > 0) keys.push(v.trim());
+  }
+  return keys;
+}
+const GROQ_KEYS = getGroqKeys();
 
 // Cache RAM nội bộ (Giảm tải cho Redis và Groq)
 type CacheEntry = { caption: string; ts: number };
@@ -65,11 +74,10 @@ const endings = [
 ];  
 
 // --- Performance for high concurrency ---
-// Capacity (same time): Groq limits ~30 RPM per key (llama-3.1-8b-instant). With 16 keys ≈ 480 RPM
-//   → ~20–40 users can get AI caption concurrently; rest get cache or fallback (seedText). All users get a response.
+// Groq ~30 RPM per key. N keys → ~30*N RPM. We try 2 keys per request then fallback.
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const CACHE_MAX_SIZE = 1000;
-const MAX_KEYS_TO_TRY = 2; // Try at most 2 keys then fallback → bounded latency, less Groq load
+const MAX_KEYS_TO_TRY = 2; // Try at most 2 keys then fallback → bounded latency
 
 function pruneCache() {
   if (responseCache.size <= CACHE_MAX_SIZE) return;
@@ -109,11 +117,19 @@ export async function POST() {
     }
   }
 
-  // 4. Gọi AI (2 keys max, 2.5s timeout → fits Vercel Free 10s)
+  // 4. Gọi AI chỉ khi có ít nhất 1 key trong env (e.g. 26 keys → dùng đúng 26)
+  if (GROQ_KEYS.length === 0) {
+    pruneCache();
+    responseCache.set(seedText, { caption: seedText, ts: now });
+    if (redis) { try { await redis.set(seedText, seedText, { ex: 3600 }); } catch { /* ignore */ } }
+    return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
+  }
+
   const shuffledKeys = [...GROQ_KEYS].sort(() => Math.random() - 0.5);
   const keysToTry = shuffledKeys.slice(0, MAX_KEYS_TO_TRY);
 
   for (const key of keysToTry) {
+    if (!key || typeof key !== "string" || key.length === 0) continue;
     try {
       const groq = new Groq({ apiKey: key });
       const controller = new AbortController();
