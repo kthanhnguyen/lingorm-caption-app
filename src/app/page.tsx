@@ -317,7 +317,7 @@ export default function Home() {
           >
             LingOrm_Vbots
           </a>{" "}
-          - Zoey
+          - Z
         </p>
       </div>
     </main>
