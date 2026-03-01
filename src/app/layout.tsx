@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LingOrm Vbots App",
+  description: "LingOrm Vbots App",
+  icons: {
+    icon: "/images/logo_vbots.png",
+  },
 };
 
 export default function RootLayout({
