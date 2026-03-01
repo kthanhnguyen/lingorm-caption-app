@@ -6,13 +6,33 @@ import Image from "next/image";
 const CARD_CLASS =
   "bg-gradient-to-br from-indigo-800 via-indigo-900 to-purple-900 border border-indigo-400/30 shadow-[0_0_35px_rgba(99,102,241,0.4)] rounded-xl text-white p-6";
 
-const IMAGE_LIST = Array.from({ length: 10 }, (_, i) => {
-  const num = String(i + 1).padStart(2, "0");
-  return { id: num, src: `/images/img/${num}.png`, label: `LingOrm_${i + 1}` };
-});
+type ImageItem = { id: string; src: string; label: string };
+
+function buildList(folder: string, count: number, prefix: string): ImageItem[] {
+  return Array.from({ length: count }, (_, i) => {
+    const num = String(i + 1).padStart(2, "0");
+    return {
+      id: `${folder}-${num}`,
+      src: `/images/img/${folder}/${num}.png`,
+      label: `${prefix}_${i + 1}`,
+    };
+  });
+}
+
+const IMAGE_CATEGORIES = [
+  { id: 0, label: "LingOrm", images: buildList("LingOrm", 8, "LingOrm") },
+  { id: 1, label: "Ling", images: buildList("Ling", 6, "Ling") },
+  { id: 2, label: "Orm", images: buildList("Orm", 6, "Orm") },
+] as const;
+
+type CategoryId = (typeof IMAGE_CATEGORIES)[number]["id"];
 
 export default function DownloadImages() {
+  const [category, setCategory] = useState<CategoryId>(0);
   const [fullImage, setFullImage] = useState<{ src: string; label: string } | null>(null);
+
+  const currentCategory = IMAGE_CATEGORIES.find((c) => c.id === category) ?? IMAGE_CATEGORIES[0];
+  const imageList = currentCategory.images;
 
   const handleDownload = async (src: string, label: string) => {
     try {
@@ -36,10 +56,27 @@ export default function DownloadImages() {
         Download images
       </div>
       <p className="mb-4 text-sm text-white/80">
-        Select and download images.
+        Select a category and download images.
       </p>
+      {/* Category tabs */}
+      <div className="mb-4 flex rounded-lg border border-indigo-400/30 bg-indigo-900/40 p-1">
+        {IMAGE_CATEGORIES.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setCategory(c.id)}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              category === c.id
+                ? "bg-white text-gray-900 shadow"
+                : "text-white/80 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {IMAGE_LIST.map(({ id, src, label }) => (
+        {imageList.map(({ id, src, label }) => (
           <div
             key={id}
             className="flex flex-col items-center gap-2 rounded-lg border border-white/20 bg-white/5 p-2"
