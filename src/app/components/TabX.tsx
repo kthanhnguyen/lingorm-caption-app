@@ -8,6 +8,7 @@ const CARD_CLASS =
 export default function TabX() {
   const [caption, setCaption] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [copiedBeforeTags, setCopiedBeforeTags] = useState(false);
   const [copiedDuringTags, setCopiedDuringTags] = useState(false);
@@ -31,10 +32,22 @@ export default function TabX() {
 
   const generateCaption = async () => {
     setLoading(true);
-    const res = await fetch("/api/generate", { method: "POST" });
-    const data = await res.json();
-    setCaption(data.caption);
-    setLoading(false);
+    setError(null);
+    try {
+      const res = await fetch("/api/generate", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError("Could not load caption. Try again.");
+        setCaption("");
+        return;
+      }
+      setCaption(typeof data?.caption === "string" ? data.caption : "");
+    } catch {
+      setError("Network error. Check connection and try again.");
+      setCaption("");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -56,6 +69,17 @@ export default function TabX() {
                 aria-hidden="true"
               />
               <span>Generating caption...</span>
+            </div>
+          ) : error ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-sm">
+              <span className="text-red-400">{error}</span>
+              <button
+                type="button"
+                onClick={generateCaption}
+                className="rounded-md border border-gray-300 bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-700"
+              >
+                Retry
+              </button>
             </div>
           ) : caption ? (
             caption
