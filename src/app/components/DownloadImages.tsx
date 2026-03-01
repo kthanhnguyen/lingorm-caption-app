@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 
 const CARD_CLASS =
@@ -30,9 +30,15 @@ type CategoryId = (typeof IMAGE_CATEGORIES)[number]["id"];
 export default function DownloadImages() {
   const [category, setCategory] = useState<CategoryId>(0);
   const [fullImage, setFullImage] = useState<{ src: string; label: string } | null>(null);
+  const [fullImageLoaded, setFullImageLoaded] = useState(false);
 
   const currentCategory = IMAGE_CATEGORIES.find((c) => c.id === category) ?? IMAGE_CATEGORIES[0];
   const imageList = currentCategory.images;
+
+  const preloadFullImage = useCallback((src: string) => {
+    const img = new window.Image();
+    img.src = src;
+  }, []);
 
   const handleDownload = async (src: string, label: string) => {
     try {
@@ -83,7 +89,11 @@ export default function DownloadImages() {
           >
             <button
               type="button"
-              onClick={() => setFullImage({ src, label })}
+              onClick={() => {
+                setFullImage({ src, label });
+                setFullImageLoaded(false);
+              }}
+              onMouseEnter={() => preloadFullImage(src)}
               className="relative aspect-square w-full overflow-hidden rounded-md bg-white/10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-indigo-900"
             >
               <Image
@@ -131,13 +141,19 @@ export default function DownloadImages() {
               </svg>
             </button>
             <div className="relative h-[75vh] w-full min-w-0 overflow-hidden rounded-lg bg-white/5">
+              {!fullImageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                </div>
+              )}
               <Image
                 src={fullImage.src}
                 alt={fullImage.label}
                 fill
-                className="object-contain"
+                className={`object-contain transition-opacity duration-200 ${fullImageLoaded ? "opacity-100" : "opacity-0"}`}
                 sizes="(max-width: 768px) 90vw, 672px"
                 loading="eager"
+                onLoad={() => setFullImageLoaded(true)}
               />
             </div>
             <p className="text-sm font-medium text-white/90">{fullImage.label}</p>
