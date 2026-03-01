@@ -23,6 +23,7 @@ export async function POST() {
         - No emojis.
         - No hashtags.
         - Output only the caption.
+        - Do not mention any person other than LingOrm.
     `;
 
     const chatCompletion = await groq.chat.completions.create({
