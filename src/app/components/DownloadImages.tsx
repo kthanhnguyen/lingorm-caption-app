@@ -92,6 +92,7 @@ export default function DownloadImages() {
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 50vw, 20vw"
+                loading="lazy"
               />
             </button>
             <span className="text-xs font-medium text-white/90">{label}</span>
@@ -136,6 +137,7 @@ export default function DownloadImages() {
                 fill
                 className="object-contain"
                 sizes="(max-width: 768px) 90vw, 672px"
+                loading="eager"
               />
             </div>
             <p className="text-sm font-medium text-white/90">{fullImage.label}</p>
