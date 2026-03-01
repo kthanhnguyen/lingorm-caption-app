@@ -1,0 +1,39 @@
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"B","location":"src/app/page.tsx:60","message":"useEffect initial generate","data":{},"timestamp":1772267606456}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:12","message":"generateCaption start","data":{"loadingBefore":false,"hasCaption":false},"timestamp":1772267606457}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267606618}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":280},"timestamp":1772267607415}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:27","message":"generateCaption success","data":{"ok":true,"status":200,"hasCaption":true},"timestamp":1772267607423}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:12","message":"generateCaption start","data":{"loadingBefore":false,"hasCaption":true},"timestamp":1772267609751}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267609765}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":233},"timestamp":1772267610142}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:27","message":"generateCaption success","data":{"ok":true,"status":200,"hasCaption":true},"timestamp":1772267610148}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:12","message":"generateCaption start","data":{"loadingBefore":false,"hasCaption":true},"timestamp":1772267615996}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267616016}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":225},"timestamp":1772267616618}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:27","message":"generateCaption success","data":{"ok":true,"status":200,"hasCaption":true},"timestamp":1772267616626}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:12","message":"generateCaption start","data":{"loadingBefore":false,"hasCaption":true},"timestamp":1772267618316}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267618331}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":257},"timestamp":1772267618799}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:27","message":"generateCaption success","data":{"ok":true,"status":200,"hasCaption":true},"timestamp":1772267618805}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:12","message":"generateCaption start","data":{"loadingBefore":false,"hasCaption":true},"timestamp":1772267620729}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267620743}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":290},"timestamp":1772267621169}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/page.tsx:27","message":"generateCaption success","data":{"ok":true,"status":200,"hasCaption":true},"timestamp":1772267621176}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267636847}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":240},"timestamp":1772267637327}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267638255}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":213},"timestamp":1772267638692}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772267639204}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":241},"timestamp":1772267639616}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772268776538}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":243},"timestamp":1772268777106}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772268779541}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":257},"timestamp":1772268779933}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772268787563}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":268},"timestamp":1772268788159}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772269156065}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":288},"timestamp":1772269156707}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772269288566}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":227},"timestamp":1772269289095}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:28","message":"API generate POST start","data":{},"timestamp":1772269664751}
+{"sessionId":"74ec9e","runId":"pre-fix","hypothesisId":"A","location":"src/app/api/generate/route.ts:44","message":"API generate POST success","data":{"hasCaption":true,"captionLength":253},"timestamp":1772269665321}
