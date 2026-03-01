@@ -19,7 +19,7 @@ function getGroqKeys(): string[] {
       .filter((k): k is string => typeof k === "string" && k.length > 0);
   }
   const keys: string[] = [];
-  for (let i = 1; i <= 200; i++) {
+  for (let i = 1; i <= 450; i++) {
     const v = process.env[`GROQ_KEY_${i}`];
     if (typeof v === "string" && v.trim().length > 0) keys.push(v.trim());
   }
