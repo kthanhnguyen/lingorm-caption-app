@@ -154,24 +154,31 @@ export async function POST(request: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-      const completion = await groq.chat.completions.create({
-        messages: [
-          { 
-            role: "system", 
-            content: `Vogue Editor. 
-            Task: Write ONE short, luxury sentence for LingOrm at Dior AW26.
-            STRICT RULES:
-            1. Length: UNDER 100 characters (This is vital).
-            2. Content: Must be over 25 characters.
-            3. Style: Iconic, chic, Parisian.
-            4. Subject: ${isDuo ? "LingOrm (plural)" : `${name} (singular)`}.` 
-          },
-          { role: "user", content: `Write a 80-character sentence for ${name} at Dior AW26.` }
-        ],
-        model: "llama-3.1-8b-instant",
-        temperature: 0.7, 
-        max_tokens: 40, 
-      }, { signal: controller.signal });
+      const personality = category === "ling" 
+        ? "Lingling Kwong: Elegant, serene, regal, classical beauty."
+        : category === "orm"
+        ? "Orm Kornnaphat: Edgy, radiant, magnetizing, modern chic."
+        : "LingOrm: Powerful duo, iconic Brand Ambassadors.";
+
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { 
+              role: "system", 
+              content: `Vogue Editor. 
+              Subject: ${name} (Dior Brand Ambassadors).
+              Event: Paris Fashion Week, Dior Autumn Winter 2026 (AW26) Show.
+              STRICT RULES:
+              1. Length: 70 to 110 characters (Must be > 25 chars).
+              2. No "walking on runway" or "dancing". They are FRONT-ROW GUESTS.
+              3. Use ${isDuo ? "plural verbs (are/show)" : "singular verbs (is/shows)"}.
+              4. Style: Chic, iconic, elite presence.` 
+            },
+            { role: "user", content: `Write one short, luxurious sentence for ${name} at the Dior AW26 show.` }
+          ],
+          model: "llama-3.1-8b-instant",
+          temperature: 0.7,
+          max_tokens: 50,
+        }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
       const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
