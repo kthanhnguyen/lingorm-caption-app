@@ -7,8 +7,16 @@ import TabIG from "./components/TabIG";
 import TabTikTok from "./components/TabTikTok";
 import TabFacebook from "./components/TabFacebook";
 import DownloadImages from "./components/DownloadImages";
+import type { Category } from "./types";
+
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "lingorm", label: "LingOrm" },
+  { value: "ling", label: "Ling" },
+  { value: "orm", label: "Orm" },
+];
 
 export default function Home() {
+  const [category, setCategory] = useState<Category>("lingorm");
   const [mainPage, setMainPage] = useState<"generate" | "download">("generate");
   const [activeTab, setActiveTab] = useState<"x" | "ig" | "tiktok" | "facebook">("x");
 
@@ -36,7 +44,27 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Main menu: Generate | Download images — page-level nav */}
+        {/* Category select: LingOrm | Ling | Orm — content follows selection */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="category-select" className="text-xs uppercase tracking-wider text-white/70">
+            Category
+          </label>
+          <select
+            id="category-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Category)}
+            className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm font-medium text-white focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            aria-label="Select category"
+          >
+            {CATEGORIES.map(({ value, label }) => (
+              <option key={value} value={value} className="bg-gray-900 text-white">
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Main menu: Generate | Download images — content follows category */}
         <nav className="flex border-b border-white/20" aria-label="Main">
           <button
             type="button"
@@ -62,7 +90,7 @@ export default function Home() {
           </button>
         </nav>
 
-        {mainPage === "download" && <DownloadImages />}
+        {mainPage === "download" && <DownloadImages category={category} />}
 
         {mainPage === "generate" && (
           <>
@@ -132,10 +160,10 @@ export default function Home() {
           </button>
         </div>
 
-        {activeTab === "x" && <TabX />}
-        {activeTab === "ig" && <TabIG />}
-        {activeTab === "tiktok" && <TabTikTok />}
-        {activeTab === "facebook" && <TabFacebook />}
+        {activeTab === "x" && <TabX category={category} />}
+        {activeTab === "ig" && <TabIG category={category} />}
+        {activeTab === "tiktok" && <TabTikTok category={category} />}
+        {activeTab === "facebook" && <TabFacebook category={category} />}
           </>
         )}
 
