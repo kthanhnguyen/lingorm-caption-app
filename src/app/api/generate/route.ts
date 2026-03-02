@@ -10,19 +10,21 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
   : null;
 
 // Only use keys that exist in env. GROQ_KEYS="key1,key2,..." or GROQ_KEY_1..GROQ_KEY_N (e.g. 444 keys). Vercel free + Redis + Llama: performance and cache okay.
+let CACHED_GROQ_KEYS: string[] | null = null;
 function getGroqKeys(): string[] {
-  const fromList = process.env.GROQ_KEYS;
-  if (fromList && typeof fromList === "string") {
-    return fromList
-      .split(",")
-      .map((k) => k.trim())
-      .filter((k): k is string => typeof k === "string" && k.length > 0);
-  }
+  if (CACHED_GROQ_KEYS) return CACHED_GROQ_KEYS;
+  
   const keys: string[] = [];
-  for (let i = 1; i <= 500; i++) {
-    const v = process.env[`GROQ_KEY_${i}`];
-    if (typeof v === "string" && v.trim().length > 0) keys.push(v.trim());
-  }
+  const env = process.env;
+  
+  Object.keys(env).forEach((key) => {
+    if (key.startsWith("GROQ_KEY_")) {
+      const val = env[key];
+      if (val && val.trim().length > 0) keys.push(val.trim());
+    }
+  });
+  
+  CACHED_GROQ_KEYS = keys;
   return keys;
 }
 const GROQ_KEYS = getGroqKeys();
@@ -76,13 +78,13 @@ const endings = [
   "Iconic in every sense.", "The winter season’s crowning glory.", "A timeless tribute to craft.", "The future of Dior looks bright."
 ];  
 
-// --- Performance for high concurrency ---
-// Groq ~30 RPM per key. N keys → ~30*N RPM. We try 2 keys per request then fallback.
-// Scale note: 2000 concurrent → Vercel burst ~1000/10s (rest may 503); 1M req/day → need paid Vercel + paid Redis (free: ~1M invocations/month, ~500k Redis commands/month).
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const CACHE_MAX_SIZE = 5000; // larger = more RAM hits, fewer Redis/Groq at 1M/day
-const MAX_KEYS_TO_TRY = 2; // Try at most 2 keys then fallback → bounded latency
-const PRUNE_PROBABILITY = 0.1; // only run prune ~10% of writes → less CPU, cache still bounded
+// --- Performance & survival config ---
+// Designed to survive high read traffic on free/low tiers by leaning on RAM cache and very light Redis writes.
+const CACHE_MAX_SIZE = 8000; // limit number of captions in RAM
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const REDIS_WRITE_PROB = 0.02; // only ~2% of hits write to Redis to protect Upstash free
+const AI_TIMEOUT_MS = 1800; // 1.8s timeout so Vercel instances free quickly under load
+const PRUNE_PROBABILITY = 0.1; // run prune ~10% of writes → less CPU, cache still bounded
 
 function pruneCache() {
   if (responseCache.size <= CACHE_MAX_SIZE) return;
@@ -126,6 +128,7 @@ export async function POST(request: NextRequest) {
     try {
       const redisVal = await redis.get(seedText);
       if (redisVal && typeof redisVal === "string") {
+        if (Math.random() < PRUNE_PROBABILITY) pruneCache();
         responseCache.set(seedText, { caption: redisVal, ts: now });
         return NextResponse.json({ success: true, caption: redisVal, source: "REDIS" });
       }
@@ -134,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 4. Call AI only when there is at least 1 key in env (444 keys → use exactly N keys)
+  // 4. If there is NO key in env → fallback immediately (do not call Groq). If we have keys, try Groq below.
   if (GROQ_KEYS.length === 0) {
     if (Math.random() < PRUNE_PROBABILITY) pruneCache();
     responseCache.set(seedText, { caption: seedText, ts: now });
@@ -142,19 +145,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
   }
 
-  const shuffledKeys = [...GROQ_KEYS].sort(() => Math.random() - 0.5);
-  const keysToTry = shuffledKeys.slice(0, MAX_KEYS_TO_TRY);
+  // 5. Call Groq using ONE random key (keep upstream load low and latency predictable)
+  if (GROQ_KEYS.length > 0) {
+    const randomKey = GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)];
 
-  for (const key of keysToTry) {
-    if (!key || typeof key !== "string" || key.length === 0) continue;
     try {
-      const groq = new Groq({ apiKey: key });
+      const groq = new Groq({ apiKey: randomKey });
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
       const subjectRule = isDuo
         ? "Subject is LingOrm (the duo — two people). Use plural verbs. You may say 'LingOrm' or 'they'."
-        : `Subject is ONLY ${name}. Do NOT mention the other person or "LingOrm". Write about ${name} alone. Use singular verbs (e.g. "she", "her").`;
+        : `Subject is ONLY ${name}. Do NOT mention the other person or \"LingOrm\". Write about ${name} alone. Use singular verbs (e.g. \"she\", \"her\").`;
 
       const completion = await groq.chat.completions.create({
         messages: [
@@ -179,22 +181,32 @@ export async function POST(request: NextRequest) {
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
-      const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, '');
+      const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
 
       if (aiResult && aiResult.length > 20) {
         if (Math.random() < PRUNE_PROBABILITY) pruneCache();
         responseCache.set(seedText, { caption: aiResult, ts: now });
-        if (redis) { try { await redis.set(seedText, aiResult, { ex: 86400 }); } catch { /* ignore */ } }
-        return NextResponse.json({ success: true, caption: aiResult, source: "AI" });
+
+        // Write to Redis with a low probability to protect Upstash free tier.
+        if (redis && Math.random() < REDIS_WRITE_PROB) {
+          try {
+            await redis.set(seedText, aiResult, { ex: 86400 });
+          } catch {
+            // ignore write failures on free tier
+          }
+        }
+
+        const response = NextResponse.json({ success: true, caption: aiResult, source: "AI" });
+        response.headers.set("Cache-Control", "s-maxage=60, stale-while-revalidate=30");
+        return response;
       }
     } catch {
-      continue;
+      // Groq error or timeout → fall through to fallback
     }
   }
 
-  // 5. Fallback: cache it so we don't retry Groq for same seed on every request
+  // 6. Fallback: cache template sentence so we don't keep calling Groq for same seed
   if (Math.random() < PRUNE_PROBABILITY) pruneCache();
   responseCache.set(seedText, { caption: seedText, ts: now });
-  if (redis) { try { await redis.set(seedText, seedText, { ex: 3600 }); } catch { /* ignore */ } } // 1h for fallback
   return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
 }

@@ -21,7 +21,7 @@ export type CaptionProps = {
 type PresetId = (typeof X_LINGORM_PRESETS)[number]["id"];
 
 export default function TabXLingOrm({ caption, captionLoading, captionError }: CaptionProps) {
-  const [selectedPresetId, setSelectedPresetId] = useState<PresetId>(X_LINGORM_PRESETS[0].id);
+  const [selectedPresetId, setSelectedPresetId] = useState<PresetId>(X_LINGORM_PRESETS[1].id);
   const [copiedTags, setCopiedTags] = useState(false);
   const [copiedCaptionWithTags, setCopiedCaptionWithTags] = useState(false);
   const copy = useCopyToClipboard();
