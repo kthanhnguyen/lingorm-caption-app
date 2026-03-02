@@ -1,88 +1,67 @@
 "use client";
 
 import { useState } from "react";
-
-const CARD_CLASS =
-  "flex flex-col bg-gradient-to-br from-indigo-800 via-indigo-900 to-purple-900 border border-indigo-400/30 shadow-[0_0_35px_rgba(99,102,241,0.4)] rounded-xl text-white p-6";
-
-const IG_POST_HASHTAGS =
-  "#LingOrmDiorAW26\n#DiorAW26\n#LinglingKwong\n#OrmKornnaphat #pfw";
-const IG_POST_TAG = "@dior";
-const IG_POST_COPY = `${IG_POST_HASHTAGS}\n${IG_POST_TAG}`;
-
-const IG_STORY_HASHTAGS =
-  "#LingOrmDiorAW26\n#DiorAW26 #pfw\n#LinglingKwong\n#OrmKornnaphat";
-
-const TAG_IN_PHOTO_NOTE =
-  "Tag in photo: @dior @mathildefavier @utzpeter @linglingkwong @orm.kornnaphat @parisfashionweek";
+import {
+  Card,
+  CopyButton,
+  useCopyToClipboard,
+  IG_TAGS,
+  NOTE_BOX_CLASS,
+  NOTE_BOX_TITLE_CLASS,
+  CARD_SUBLABEL_CLASS,
+} from "../../shared";
 
 export default function TabIGLingOrm() {
   const [copiedPost, setCopiedPost] = useState(false);
-  const [copiedStoryHashtags, setCopiedStoryHashtags] = useState(false);
+  const [copiedStory, setCopiedStory] = useState(false);
+  const copy = useCopyToClipboard();
 
-  const copy = async (text: string, setCopied: (v: boolean) => void) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // ignore
-    }
-  };
+  const { postHashtags, postTag, storyHashtags, tagInPhotoNote } = IG_TAGS.lingorm;
+  const postCopy = `${postHashtags}\n${postTag}`;
 
   return (
     <div>
       <div className="grid grid-cols-2 gap-4">
-        <div className={CARD_CLASS}>
-          <div className="mb-3 text-[16px] font-bold uppercase tracking-[0.18em] text-white">
-            IG Post
-          </div>
+        <Card title="IG Post" flex>
           <div className="flex flex-1 flex-col space-y-3 text-sm text-white/90">
             <div>
-              <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider text-white/80">
-                Hashtags
-              </p>
-              <p className="whitespace-pre-line text-white/90">{IG_POST_HASHTAGS}</p>
+              <p className={`mb-1 ${CARD_SUBLABEL_CLASS}`}>Hashtags</p>
+              <p className="whitespace-pre-line text-white/90">{postHashtags}</p>
             </div>
             <div>
-              <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider text-white/80">
-                Tag
-              </p>
-              <p className="text-white/90">{IG_POST_TAG}</p>
+              <p className={`mb-1 ${CARD_SUBLABEL_CLASS}`}>Tag</p>
+              <p className="text-white/90">{postTag}</p>
             </div>
             <div className="mt-auto flex flex-row items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => copy(IG_POST_COPY, setCopiedPost)}
-                className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
-              >
-                {copiedPost ? "Copied!" : "Copy"}
-              </button>
+              <CopyButton
+                onCopy={() => copy(postCopy, setCopiedPost)}
+                copied={copiedPost}
+                label="Copy hashtags"
+                copiedLabel="Copied!"
+                size="small"
+              />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className={CARD_CLASS}>
-          <div className="mb-3 text-[16px] font-bold uppercase tracking-[0.18em] text-white">
-            IG Story Hashtag
-          </div>
+        <Card title="IG Story Hashtag" flex>
           <div className="flex flex-1 flex-col space-y-3 text-sm text-white/90">
-            <p className="whitespace-pre-line text-white/90">{IG_STORY_HASHTAGS}</p>
+            <p className="whitespace-pre-line text-white/90">{storyHashtags}</p>
             <div className="mt-auto flex flex-row items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => copy(IG_STORY_HASHTAGS, setCopiedStoryHashtags)}
-                className="w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white/80 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-white"
-              >
-                {copiedStoryHashtags ? "Copied!" : "Copy hashtags"}
-              </button>
+              <CopyButton
+                onCopy={() => copy(storyHashtags, setCopiedStory)}
+                copied={copiedStory}
+                label="Copy hashtags"
+                copiedLabel="Copied!"
+                size="small"
+              />
             </div>
           </div>
-        </div>
+        </Card>
       </div>
-      <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-2 text-xs text-amber-100 mt-4">
-        <p className="mb-0.5 font-semibold uppercase tracking-wider text-amber-200/90">Note</p>
-        <p className="text-white/90">{TAG_IN_PHOTO_NOTE}</p>
+      <div className={NOTE_BOX_CLASS}>
+        <p className={NOTE_BOX_TITLE_CLASS}>Note</p>
+        <p className="text-white/90">{tagInPhotoNote}</p>
       </div>
     </div>
   );

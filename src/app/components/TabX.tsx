@@ -5,10 +5,18 @@ import TabXLingOrm from "./tabs/x/LingOrm";
 import TabXLing from "./tabs/x/Ling";
 import TabXOrm from "./tabs/x/Orm";
 
-type TabXProps = { category: Category };
+export type CaptionProps = {
+  caption: string;
+  captionLoading: boolean;
+  captionError: string | null;
+  onGenerateCaption: () => Promise<void>;
+};
 
-export default function TabX({ category }: TabXProps) {
-  if (category === "ling") return <TabXLing />;
-  if (category === "orm") return <TabXOrm />;
-  return <TabXLingOrm />;
+type TabXProps = { category: Category } & CaptionProps;
+
+export default function TabX({ category, caption, captionLoading, captionError, onGenerateCaption }: TabXProps) {
+  const captionProps: CaptionProps = { caption, captionLoading, captionError, onGenerateCaption };
+  if (category === "ling") return <TabXLing {...captionProps} />;
+  if (category === "orm") return <TabXOrm {...captionProps} />;
+  return <TabXLingOrm {...captionProps} />;
 }

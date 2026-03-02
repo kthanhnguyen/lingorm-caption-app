@@ -5,9 +5,9 @@ import TabTikTokLingOrm from "./tabs/tiktok/LingOrm";
 import TabTikTokLing from "./tabs/tiktok/Ling";
 import TabTikTokOrm from "./tabs/tiktok/Orm";
 
-type TabTikTokProps = { category: Category };
+type TabTikTokProps = { category: Category; caption?: string };
 
-export default function TabTikTok({ category }: TabTikTokProps) {
+export default function TabTikTok({ category, caption }: TabTikTokProps) {
   if (category === "ling") return <TabTikTokLing />;
   if (category === "orm") return <TabTikTokOrm />;
   return <TabTikTokLingOrm />;

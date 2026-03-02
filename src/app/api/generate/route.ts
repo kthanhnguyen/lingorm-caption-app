@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { Redis } from "@upstash/redis";
 
@@ -52,13 +52,16 @@ const actions = [
   "anchors the gaze with", "shines through", "navigates through", "dominates the scene with", "breathes life into", "commands attention with", "carefully sculpts", "elegantly manifests", "powerfully projects", "subtly redefines"
 ];
 
-const vibes = [
+const vibes_shared = [
   "architectural", "avant-garde", "ethereal", "minimalist", "quintessential", "visionary", "majestic", "sculptural", "understated", "opulent",
   "aristocratic", "fluid", "heritage-rich", "transcendental", "modernist", "atelier-crafted", "boldly-refined", "timelessly-chic", "high-fashion", "couture-focused",
-  "sophisticated", "ethereal yet bold", "distinctly Dior", "powerfully feminine", "elegantly structured", "seamlessly tailored", "vibrant", "monochromatic", "luminous", "dynamic",
+  "sophisticated", "distinctly Dior", "powerfully feminine", "elegantly structured", "seamlessly tailored", "vibrant", "monochromatic", "luminous", "dynamic",
   "haute-couture", "revolutionary", "strikingly poised", "exquisitely balanced", "effortlessly cool", "sartorial", "unapologetic", "captivating", "dreamlike", "meticulous",
   "sharply-cut", "lavishly-detailed", "uniquely-crafted", "historically-inspired", "radically-chic", "sublimely-elegant", "highly-curated", "deeply-emotive", "grand", "poetic"
 ];
+
+const vibes_ling = ["statuesque", "serene", "regal", "ethereal yet bold", "heavenly", "classically poised"];
+const vibes_orm = ["edgy", "radiant", "magnetizing", "avant-modern", "electric", "boldly expressive"];
 
 const endings = [
   "A masterclass in style.", "Heritage reimagined.", "Pure couture elegance.", "The gold standard of luxury.", "A visionary narrative of craft.", "The dawn of a new legacy.",
@@ -90,15 +93,27 @@ function pruneCache() {
   }
 }
 
-export async function POST() {
+function getIdentity(category: string | null): { name: string; vibe: string[]; isDuo: boolean } {
+  const c = (category || "lingorm").toLowerCase();
+  if (c === "ling") return { name: "Lingling Kwong", vibe: [...vibes_shared, ...vibes_ling], isDuo: false };
+  if (c === "orm") return { name: "Orm Kornnaphat", vibe: [...vibes_shared, ...vibes_orm], isDuo: false };
+  return { name: "LingOrm", vibe: vibes_shared, isDuo: true };
+}
+
+export async function POST(request: NextRequest) {
   const now = Date.now();
+  const category = request.nextUrl?.searchParams?.get("category") ?? "lingorm";
+  const { name, vibe, isDuo } = getIdentity(category);
 
   // 1. Create fallback sentence (Speed 0ms)
   const h = hooks[Math.floor(Math.random() * hooks.length)];
-  const a = actions[Math.floor(Math.random() * actions.length)];
-  const v = vibes[Math.floor(Math.random() * vibes.length)];
-  const e = endings[Math.floor(Math.random() * endings.length)];
-  const seedText = `${h} LingOrm ${a} a ${v} silhouette for Dior Autumn Winter 2026. ${e}`;
+  const action = actions[Math.floor(Math.random() * actions.length)];
+  // Duo (LingOrm = 2 people): use plural verb — strip trailing "s" so "redefines" → "redefine"
+  const formattedAction = isDuo ? action.replace(/s$/, "") : action;
+  const v = vibe[Math.floor(Math.random() * vibe.length)];
+  const eRaw = endings[Math.floor(Math.random() * endings.length)];
+  const e = eRaw.replace(/LingOrm/g, name);
+  const seedText = `${h} ${name} ${formattedAction} a ${v} silhouette for Dior Autumn Winter 2026. ${e}`;
 
   // 2. Check Cache RAM (Speed 0ms)
   const ramCached = responseCache.get(seedText);
@@ -137,14 +152,30 @@ export async function POST() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
 
+      const subjectRule = isDuo
+        ? "Subject is LingOrm (the duo — two people). Use plural verbs. You may say 'LingOrm' or 'they'."
+        : `Subject is ONLY ${name}. Do NOT mention the other person or "LingOrm". Write about ${name} alone. Use singular verbs (e.g. "she", "her").`;
+
       const completion = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: "You are a luxury fashion editor for Vogue. Rewrite the input into ONE elegant English sentence. No hashtags, no quotes. Output ONLY the text." },
-          { role: "user", content: `Rewrite: ${seedText}` }
+          { 
+            role: "system", 
+            content: `You are a luxury fashion editor for Vogue. Rewrite the input into ONE elegant English sentence.
+
+            CRITICAL — WHO IS IN THE CAPTION:
+            ${subjectRule}
+
+            NAMING: Keep the subject name exactly as in the input. Never write "LingOrm Kwong" or "LingOrm Kornnaphat".
+
+            STYLE: Lingling Kwong → classic elegance, ethereal. Orm Kornnaphat → modern energy, bold charisma. LingOrm → iconic chemistry, combined power.
+
+            Output ONLY the text. No hashtags, no quotes.` 
+          },
+          { role: "user", content: `Rewrite (subject = ${name} only, do not add the other person or duo): ${seedText}` }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 1.1,
-        presence_penalty: 1.8,
+        temperature: 0.9,
+        presence_penalty: 1.5,
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
