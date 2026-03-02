@@ -84,6 +84,7 @@ const CACHE_MAX_SIZE = 8000; // limit number of captions in RAM
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const REDIS_WRITE_PROB = 0.02; // only ~2% of hits write to Redis to protect Upstash free
 const AI_TIMEOUT_MS = 1800; // 1.8s timeout so Vercel instances free quickly under load
+const REDIS_TIMEOUT_MS = 400; // max 0.4s waiting for Redis before falling back
 const PRUNE_PROBABILITY = 0.1; // run prune ~10% of writes → less CPU, cache still bounded
 
 function pruneCache() {
@@ -126,7 +127,22 @@ export async function POST(request: NextRequest) {
   // 3. Check Redis (shared cache across Vercel instances)
   if (redis) {
     try {
-      const redisVal = await redis.get(seedText);
+      const redisVal = await new Promise<string | null>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error("Redis timeout"));
+        }, REDIS_TIMEOUT_MS);
+
+        redis
+          .get(seedText)
+          .then((val) => {
+            clearTimeout(timeoutId);
+            resolve(typeof val === "string" ? val : null);
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          });
+      });
       if (redisVal && typeof redisVal === "string") {
         if (Math.random() < PRUNE_PROBABILITY) pruneCache();
         responseCache.set(seedText, { caption: redisVal, ts: now });
@@ -154,31 +170,26 @@ export async function POST(request: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-      const personality = category === "ling" 
-        ? "Lingling Kwong: Elegant, serene, regal, classical beauty."
-        : category === "orm"
-        ? "Orm Kornnaphat: Edgy, radiant, magnetizing, modern chic."
-        : "LingOrm: Powerful duo, iconic Brand Ambassadors.";
-
-        const completion = await groq.chat.completions.create({
-          messages: [
-            { 
-              role: "system", 
-              content: `Vogue Editor. 
-              Subject: ${name} (Dior Brand Ambassadors).
-              Event: Paris Fashion Week, Dior Autumn Winter 2026 (AW26) Show.
-              STRICT RULES:
-              1. Length: 70 to 110 characters (Must be > 25 chars).
-              2. No "walking on runway" or "dancing". They are FRONT-ROW GUESTS.
-              3. Use ${isDuo ? "plural verbs (are/show)" : "singular verbs (is/shows)"}.
-              4. Style: Chic, iconic, elite presence.` 
-            },
-            { role: "user", content: `Write one short, luxurious sentence for ${name} at the Dior AW26 show.` }
-          ],
-          model: "llama-3.1-8b-instant",
-          temperature: 0.7,
-          max_tokens: 50,
-        }, { signal: controller.signal });
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { 
+            role: "system", 
+            content: `Role: Fashion Editor.
+      Subject: ${name} (Front-row guests).
+      Event: Dior AW26, Paris Fashion Week.
+      Rules:
+      - ONE sentence only.
+      - Length: 70-110 characters.
+      - Verbs: ${isDuo ? "Plural (ex: show, are, capture)" : "Singular (ex: shows, is, captures)"}.
+      - Forbidden: No walking runway, no dancing, no hashtags.
+      - Style: Elegant, front-row presence.`
+          },
+          { role: "user", content: `Write a luxury sentence for ${name} at Dior AW26.` }
+        ],
+        model: "llama-3.1-8b-instant",
+        temperature: 0.6,
+        max_tokens: 50,
+      }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
       const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
