@@ -80,11 +80,11 @@ const endings = [
 ];  
 
 // --- Performance & survival config ---
-// Tuned for Vercel Pro + Upstash pay-as-you-go, prioritizing fast UX (< ~4s worst-case).
+// Tuned for Vercel Pro + Upstash pay-as-you-go and batch generation.
 const CACHE_MAX_SIZE = 8000; // reserved for future RAM caching strategies
 const CACHE_TTL_MS = 8000;
 const REDIS_WRITE_PROB = 0.02;
-const AI_TIMEOUT_MS = 2000; // 2s per attempt; with 2 retries worst-case ~4s
+const AI_TIMEOUT_MS = 3500; // 3.5s per attempt; up to 3 attempts under high load
 const REDIS_TIMEOUT_MS = 400;
 const PRUNE_PROBABILITY = 0.1;
 
@@ -109,8 +109,7 @@ export async function POST(request: NextRequest) {
   const category = request.nextUrl?.searchParams?.get("category") ?? "lingorm";
   const { name, vibe, isDuo } = getIdentity(category);
 
-  // If no Groq keys, go straight to a random template sentence
-  const makeFallback = () => {
+  const makeOneFallback = () => {
     const h = hooks[Math.floor(Math.random() * hooks.length)];
     const v = vibe[Math.floor(Math.random() * vibe.length)];
     const eRaw = endings[Math.floor(Math.random() * endings.length)];
@@ -118,13 +117,11 @@ export async function POST(request: NextRequest) {
     return `${h} ${name} ${isDuo ? "redefine" : "redefines"} a ${v} silhouette for Dior AW26. ${e}`;
   };
 
-  if (GROQ_KEYS.length === 0) {
-    const fallbackCaption = makeFallback();
-    return NextResponse.json({ success: true, caption: fallbackCaption, source: "FALLBACK" });
-  }
+  const makeFallbackBatch = () => [makeOneFallback(), makeOneFallback(), makeOneFallback(), makeOneFallback()];
 
-  // Retry a couple of times with different keys/seeds to reduce FALLBACKs
-  const maxAttempts = 2;
+  if (GROQ_KEYS.length === 0) return NextResponse.json({ captions: makeFallbackBatch(), source: "FALLBACK" });
+
+  const maxAttempts = 3;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const randomSeed = Math.random().toString(36).slice(2, 8);
@@ -137,49 +134,60 @@ export async function POST(request: NextRequest) {
         messages: [
           { 
             role: "system", 
-            content: `Vogue Fashion Editor.
-Subject: ${name} (Dior Brand Ambassador).
-Event: Dior Autumn Winter 2026 (AW26), Paris.
-Rules:
-- ONE sentence only.
-- Length: 75-105 characters.
-- Verbs: ${isDuo ? "Plural (are/show/capture)" : "Singular (is/shows/captures)"}.
-- No runway, no walking, no hashtags, no "models".
-- Style: high-fashion, Parisian chic.
-- Variation token (do NOT print): ${randomSeed}.`
+            content: `Fashion Editor. Return ONLY JSON: {"captions": ["s1", "s2", "s3", "s4"]}
+            Event: Dior AW26 Paris. Subject: ${name} (Ambassador).
+            Rules:
+            - Exactly 4 sentences.
+            - Length per sentence: 85-125 characters.
+            - MUST start with "${name}".
+            - Verbs: ${isDuo ? "Plural" : "Singular"}.
+            - No runway, no models. High-fashion style.
+            - Variation: ${randomSeed}.`
           },
-          { role: "user", content: `Write one iconic sentence for Dior Ambassador ${name} at the AW26 show.` }
+          { role: "user", content: `Generate 4 captions for ${name} at Dior AW26.` }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 0.95,
-        max_tokens: 50,
+        temperature: 0.9,
+        max_tokens: 400, // Tăng lên để tránh bị cắt nửa chừng
+        response_format: { type: "json_object" } // Ép Groq trả JSON chuẩn
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("AI timeout")), AI_TIMEOUT_MS)
+        setTimeout(() => reject(new Error("AI timeout")), 4500) // Tăng lên 4.5s cho chắc
       );
 
       const completion = await Promise.race([aiPromise, timeoutPromise]);
-      const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
+      const raw = completion.choices[0]?.message?.content?.trim();
 
-      if (aiResult) {
-        if (redis) {
-          redis.set(`log:${category}:${now}`, aiResult, { ex: 3600 }).catch(() => {});
+      if (!raw) continue;
+
+      let parsed: any = JSON.parse(raw);
+      let captions = parsed.captions || [];
+
+      // Nới lỏng kiểm tra để giảm tỉ lệ Fallback, chỉ cần câu có độ dài hợp lý là duyệt
+      const validCaptions = captions.filter((s: any) => 
+        typeof s === "string" && s.length >= 70 && s.length <= 150
+      );
+
+      if (validCaptions.length >= 1) { // Nếu có ít nhất 1 câu xịn thì dùng luôn, thiếu thì bù bằng fallback
+        let finalCaptions = validCaptions.slice(0, 4);
+        while (finalCaptions.length < 4) {
+          finalCaptions.push(makeOneFallback());
         }
 
-        const response = NextResponse.json({ success: true, caption: aiResult, source: "AI" });
-        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-        response.headers.set("Pragma", "no-cache");
-        response.headers.set("Expires", "0");
+        if (redis) {
+          redis.set(`batch:${category}:${now}`, finalCaptions, { ex: 3600 }).catch(() => {});
+        }
+
+        const response = NextResponse.json({ captions: finalCaptions, source: "AI" });
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
         return response;
       }
-    } catch (err) {
-      if (attempt === maxAttempts - 1) {
-        console.error("Groq caption generation failed after retries:", err);
-      }
+    } catch (err: any) {
+      console.warn(`Attempt ${attempt + 1} failed: ${err.message}`);
+      if (attempt === maxAttempts - 1) break;
     }
   }
 
-  const fallbackCaption = makeFallback();
-  return NextResponse.json({ success: true, caption: fallbackCaption, source: "FALLBACK" });
+  return NextResponse.json({ captions: makeFallbackBatch(), source: "FALLBACK" });
 }

@@ -24,31 +24,84 @@ export default function Home() {
   const [captionLoading, setCaptionLoading] = useState(false);
   const [captionError, setCaptionError] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
+  const [captionQueue, setCaptionQueue] = useState<string[]>([]);
+  const [isPreFetching, setIsPreFetching] = useState(false);
 
-  const generateCaption = useCallback(async () => {
-    setCaptionLoading(true);
-    setCaptionError(null);
+  const fetchBatch = useCallback(async (): Promise<string[]> => {
     try {
       const res = await fetch(`/api/generate?category=${category}`, { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setCaptionError("Could not load caption. Try again.");
-        setCaption("");
-        return;
-      }
-      setCaption(typeof data?.caption === "string" ? data.caption : "");
+      const data = await res.json().catch(() => null);
+      const batch = Array.isArray((data as any)?.captions) ? ((data as any).captions as string[]) : [];
+      if (!res.ok || batch.length === 0) return [];
+      return batch;
     } catch {
-      setCaptionError("Network error. Check connection and try again.");
-      setCaption("");
-    } finally {
-      setCaptionLoading(false);
+      return [];
     }
   }, [category]);
 
+  const handleGenerateCaption = useCallback(async () => {
+    setCaptionLoading(true);
+    setCaptionError(null);
+    try {
+      // 1. If we have queued captions from the last batch, serve from queue (0ms).
+      if (captionQueue.length > 0) {
+        const [next, ...rest] = captionQueue;
+        setCaption(next ?? "");
+        setCaptionQueue(rest);
+
+        // Pre-fetch next batch in the background when queue is running low
+        if (rest.length <= 1 && !isPreFetching) {
+          setIsPreFetching(true);
+          fetchBatch().then((newCaptions) => {
+            if (newCaptions.length > 0) {
+              setCaptionQueue((prev) => [...prev, ...newCaptions]);
+            }
+            setIsPreFetching(false);
+          });
+        }
+        return;
+      }
+
+      // 2. If queue is empty, fetch a fresh batch
+      const batch = await fetchBatch();
+      if (batch.length === 0) {
+        setCaptionError("Could not load caption. Try again.");
+        setCaption("");
+        setCaptionQueue([]);
+        return;
+      }
+
+      const [first, ...rest] = batch;
+      setCaption(first ?? "");
+      setCaptionQueue(rest);
+    } catch {
+      setCaptionError("Network error. Check connection and try again.");
+      setCaption("");
+      setCaptionQueue([]);
+    } finally {
+      setCaptionLoading(false);
+    }
+  }, [captionQueue, fetchBatch, isPreFetching]);
+
   useEffect(() => {
     if (mainPage !== "generate") return;
-    generateCaption();
-  }, [mainPage, category, generateCaption]);
+    // On first load / category change, pre-fetch a batch
+    (async () => {
+      setCaptionLoading(true);
+      setCaptionError(null);
+      const batch = await fetchBatch();
+      if (batch.length > 0) {
+        const [first, ...rest] = batch;
+        setCaption(first ?? "");
+        setCaptionQueue(rest);
+      } else {
+        setCaption("");
+        setCaptionQueue([]);
+        setCaptionError("Could not load caption. Try again.");
+      }
+      setCaptionLoading(false);
+    })();
+  }, [mainPage, category, fetchBatch]);
 
   const copyCaption = async () => {
     if (!caption) return;
@@ -93,7 +146,13 @@ export default function Home() {
           <select
             id="category-select"
             value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
+            onChange={(e) => {
+              const nextCategory = e.target.value as Category;
+              setCategory(nextCategory);
+              setCaption("");
+              setCaptionQueue([]);
+              setCaptionError(null);
+            }}
             className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm font-medium text-white focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
             aria-label="Select category"
           >
@@ -154,7 +213,7 @@ export default function Home() {
                 <span className="text-red-400">{captionError}</span>
                 <button
                   type="button"
-                  onClick={generateCaption}
+                onClick={handleGenerateCaption}
                   className="rounded-md border border-gray-300 bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-700"
                 >
                   Retry
@@ -170,7 +229,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3 mt-4">
             <button
-              onClick={generateCaption}
+              onClick={handleGenerateCaption}
               disabled={captionLoading}
               className="flex-1 inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -288,7 +347,7 @@ export default function Home() {
             caption={caption}
             captionLoading={captionLoading}
             captionError={captionError}
-            onGenerateCaption={generateCaption}
+            onGenerateCaption={handleGenerateCaption}
           />
         )}
         {activeTab === "ig" && <TabIG category={category} caption={caption} />}
