@@ -15,7 +15,7 @@ export const X_LINGORM_PRESETS = [
   // { id: "before", label: "Before 02 MAR 2026 3:30 PM BKK TIME", tags: "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm", notes: "" },
   // { id: "airport", label: "Airport - 02 MAR 2026 3:30 PM BKK TIME", tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook", notes: "" },
   { id: "airport-rank-1", label: "Airport - 02 MAR 2026 3:30 PM BKK TIME - After Rank #1", tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook\n#LinglingKwong #OrmKornnaphat #LingOrm\n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm", notes: "After hashtag #LingOrmDiorAW26APTLook rank 1 on X use this preset." },
-  { id: "during", label: "03 MAR 2026", tags: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#Dior #DiorAW26 #PFW\n#LinglingKwong #OrmKornnaphat #LingOrm ", notes: "" },
+  { id: "during", label: "03 MAR 2026", tags: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#Dior #DiorAW26 #PFW\n#LinglingKwong #OrmKornnaphat #LingOrm \n@Dior @linglingsirilak @ormmormm", notes: "" },
 ] as const;
 
 // --- IG ---

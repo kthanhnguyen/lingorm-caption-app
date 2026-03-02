@@ -81,7 +81,7 @@ const endings = [
 // --- Performance & survival config ---
 // Designed to survive high read traffic on free/low tiers by leaning on RAM cache and very light Redis writes.
 const CACHE_MAX_SIZE = 8000; // limit number of captions in RAM
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_TTL_MS = 8000; // 8 seconds RAM cache to prevent spam but still rotate captions quickly
 const REDIS_WRITE_PROB = 0.02; // only ~2% of hits write to Redis to protect Upstash free
 const AI_TIMEOUT_MS = 1800; // 1.8s timeout so Vercel instances free quickly under load
 const REDIS_TIMEOUT_MS = 400; // max 0.4s waiting for Redis before falling back
@@ -106,88 +106,40 @@ function getIdentity(category: string | null): { name: string; vibe: string[]; i
 export async function POST(request: NextRequest) {
   const now = Date.now();
   const category = request.nextUrl?.searchParams?.get("category") ?? "lingorm";
-  const { name, vibe, isDuo } = getIdentity(category);
-  const cacheKey = category;
-  const redisKey = `cap:${category}`;
+  const { name, isDuo } = getIdentity(category);
 
-  // 1. Create fallback sentence (Speed 0ms)
-  const h = hooks[Math.floor(Math.random() * hooks.length)];
-  const action = actions[Math.floor(Math.random() * actions.length)];
-  // Duo (LingOrm = 2 people): use plural verb — strip trailing "s" so "redefines" → "redefine"
-  const formattedAction = isDuo ? action.replace(/s$/, "") : action;
-  const v = vibe[Math.floor(Math.random() * vibe.length)];
-  const eRaw = endings[Math.floor(Math.random() * endings.length)];
-  const e = eRaw.replace(/LingOrm/g, name);
-  const seedText = `${h} ${name} ${formattedAction} a ${v} silhouette for Dior Autumn Winter 2026. ${e}`;
+  // 1. Force a fresh cache key on every click so AI runs again
+  const randomSalt = Math.floor(Math.random() * 1000);
+  const cacheKey = `${category}_${randomSalt}`;
 
-  // 2. Check Cache RAM (Speed 0ms)
-  const ramCached = responseCache.get(cacheKey);
-  if (ramCached && now - ramCached.ts < CACHE_TTL_MS) {
-    return NextResponse.json({ success: true, caption: ramCached.caption, source: "RAM" });
-  }
-
-  // 3. Check Redis (shared cache across Vercel instances)
-  if (redis) {
-    try {
-      const redisVal = await new Promise<string | null>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error("Redis timeout"));
-        }, REDIS_TIMEOUT_MS);
-
-        redis
-          .get(redisKey)
-          .then((val) => {
-            clearTimeout(timeoutId);
-            resolve(typeof val === "string" ? val : null);
-          })
-          .catch((err) => {
-            clearTimeout(timeoutId);
-            reject(err);
-          });
-      });
-      if (redisVal && typeof redisVal === "string") {
-        if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-        responseCache.set(cacheKey, { caption: redisVal, ts: now });
-        return NextResponse.json({ success: true, caption: redisVal, source: "REDIS" });
-      }
-    } catch {
-      // Redis down or rate-limited (Upstash Free): continue to Groq/fallback
-    }
-  }
-
-  // 4. If there is NO key in env → fallback immediately (do not call Groq). If we have keys, try Groq below.
-  if (GROQ_KEYS.length === 0) {
-    if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-    responseCache.set(cacheKey, { caption: seedText, ts: now });
-    if (redis) { try { await redis.set(redisKey, seedText, { ex: 3600 }); } catch { /* ignore */ } }
-    return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
-  }
-
-  // 5. Call Groq using ONE random key (keep upstream load low and latency predictable)
+  // 2. If we have Groq keys, call AI directly (no Redis read)
   if (GROQ_KEYS.length > 0) {
     const randomKey = GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)];
+    const groq = new Groq({ apiKey: randomKey });
+    const aiSeed = Math.random().toString(36).slice(2, 7);
 
     try {
-      const groq = new Groq({ apiKey: randomKey });
       const aiPromise = groq.chat.completions.create({
         messages: [
           { 
             role: "system", 
-            content: `Role: Fashion Editor.
-      Subject: ${name} (Front-row guests).
-      Event: Dior AW26, Paris Fashion Week.
-      Rules:
-      - ONE sentence only.
-      - Length: 70-110 characters.
-      - Verbs: ${isDuo ? "Plural (ex: show, are, capture)" : "Singular (ex: shows, is, captures)"}.
-      - Forbidden: No walking runway, no dancing, no hashtags.
-      - Style: Elegant, front-row presence.`
+            content: `Vogue Fashion Editor. 
+            Event: Dior Autumn Winter 2026 (AW26) show in Paris.
+            Subject: ${name} (Dior Brand Ambassador).
+            
+            STRICT WRITING RULES:
+            1. Subject MUST be "${name}".
+            2. Status: Dior Brand Ambassador.
+            3. No "models", no "runway", no "walking", no "they show", no "designs".
+            4. Length: 75-105 characters (Must be > 25 chars).
+            5. Vocabulary: Use "Paris", "Dior AW26", "chic", "silhouette", "ambassador".
+            6. Grammar: Correct English. No double subjects like "Name they show".` 
           },
-          { role: "user", content: `Write a luxury sentence for ${name} at Dior AW26.` }
+          { role: "user", content: `Write one iconic sentence for Dior Brand Ambassador ${name} at the AW26 show.` }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 0.6,
-        max_tokens: 50,
+        temperature: 0.95,
+        max_tokens: 45,
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -198,20 +150,26 @@ export async function POST(request: NextRequest) {
       const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
 
       if (aiResult && aiResult.length > 20) {
-        if (Math.random() < PRUNE_PROBABILITY) pruneCache();
+        // Short-lived RAM cache entry (mainly for protection if multiple requests share the same randomSalt accidentally)
         responseCache.set(cacheKey, { caption: aiResult, ts: now });
 
-        // Write to Redis with a low probability to protect Upstash free tier.
-        if (redis && Math.random() < REDIS_WRITE_PROB) {
-          try {
-            await redis.set(redisKey, aiResult, { ex: 86400 });
-          } catch {
-            // ignore write failures on free tier
-          }
+        // Log to Redis as history only (never read back for content)
+        if (redis) {
+          redis.set(`log:${category}:${now}`, aiResult, { ex: 3600 }).catch(() => {});
         }
 
-        const response = NextResponse.json({ success: true, caption: aiResult, source: "AI" });
-        response.headers.set("Cache-Control", "s-maxage=60, stale-while-revalidate=30");
+        const response = NextResponse.json({ 
+          success: true, 
+          caption: aiResult, 
+          source: "AI",
+          debug: aiSeed,
+        });
+
+        // Make sure no CDN/browser cache freezes the text
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        response.headers.set("Expires", "0");
+
         return response;
       }
     } catch {
@@ -219,8 +177,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 6. Fallback: cache template sentence so we don't keep calling Groq for same seed
-  if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-  responseCache.set(cacheKey, { caption: seedText, ts: now });
-  return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
+  // 3. Random fallback when AI fails
+  const fallback = `${name} ${isDuo ? "redefine" : "redefines"} Dior's AW26 vision with a ${
+    vibes_shared[Math.floor(Math.random() * vibes_shared.length)]
+  } presence.`;
+
+  return NextResponse.json({ success: true, caption: fallback, source: "FALLBACK" });
 }
