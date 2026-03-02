@@ -7,8 +7,8 @@ import type { Category } from "../../types";
 
 // --- X (Twitter) ---
 export const X_TAGS: Record<Exclude<Category, "lingorm">, string> = {
-  ling: "#LinglingKwong #LingOrmDiorAW26 \n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak",
-  orm: "#OrmKornnaphat #LingOrmDiorAW26 \n#Dior #DiorAW26 #PFW\n@Dior @ormmormm",
+  ling: "#LinglingKwong \n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak",
+  orm: "#OrmKornnaphat \n#Dior #DiorAW26 #PFW\n@Dior @ormmormm",
 };
 
 export const X_LINGORM_PRESETS = [
