@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
   const now = Date.now();
   const category = request.nextUrl?.searchParams?.get("category") ?? "lingorm";
   const { name, vibe, isDuo } = getIdentity(category);
+  const cacheKey = category;
+  const redisKey = `cap:${category}`;
 
   // 1. Create fallback sentence (Speed 0ms)
   const h = hooks[Math.floor(Math.random() * hooks.length)];
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
   const seedText = `${h} ${name} ${formattedAction} a ${v} silhouette for Dior Autumn Winter 2026. ${e}`;
 
   // 2. Check Cache RAM (Speed 0ms)
-  const ramCached = responseCache.get(seedText);
+  const ramCached = responseCache.get(cacheKey);
   if (ramCached && now - ramCached.ts < CACHE_TTL_MS) {
     return NextResponse.json({ success: true, caption: ramCached.caption, source: "RAM" });
   }
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
         }, REDIS_TIMEOUT_MS);
 
         redis
-          .get(seedText)
+          .get(redisKey)
           .then((val) => {
             clearTimeout(timeoutId);
             resolve(typeof val === "string" ? val : null);
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
       });
       if (redisVal && typeof redisVal === "string") {
         if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-        responseCache.set(seedText, { caption: redisVal, ts: now });
+        responseCache.set(cacheKey, { caption: redisVal, ts: now });
         return NextResponse.json({ success: true, caption: redisVal, source: "REDIS" });
       }
     } catch {
@@ -156,8 +158,8 @@ export async function POST(request: NextRequest) {
   // 4. If there is NO key in env → fallback immediately (do not call Groq). If we have keys, try Groq below.
   if (GROQ_KEYS.length === 0) {
     if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-    responseCache.set(seedText, { caption: seedText, ts: now });
-    if (redis) { try { await redis.set(seedText, seedText, { ex: 3600 }); } catch { /* ignore */ } }
+    responseCache.set(cacheKey, { caption: seedText, ts: now });
+    if (redis) { try { await redis.set(redisKey, seedText, { ex: 3600 }); } catch { /* ignore */ } }
     return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
   }
 
@@ -167,10 +169,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const groq = new Groq({ apiKey: randomKey });
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-
-      const completion = await groq.chat.completions.create({
+      const aiPromise = groq.chat.completions.create({
         messages: [
           { 
             role: "system", 
@@ -189,19 +188,23 @@ export async function POST(request: NextRequest) {
         model: "llama-3.1-8b-instant",
         temperature: 0.6,
         max_tokens: 50,
-      }, { signal: controller.signal });
+      });
 
-      clearTimeout(timeoutId);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("AI timeout")), AI_TIMEOUT_MS)
+      );
+
+      const completion = await Promise.race([aiPromise, timeoutPromise]);
       const aiResult = completion.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, "");
 
       if (aiResult && aiResult.length > 20) {
         if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-        responseCache.set(seedText, { caption: aiResult, ts: now });
+        responseCache.set(cacheKey, { caption: aiResult, ts: now });
 
         // Write to Redis with a low probability to protect Upstash free tier.
         if (redis && Math.random() < REDIS_WRITE_PROB) {
           try {
-            await redis.set(seedText, aiResult, { ex: 86400 });
+            await redis.set(redisKey, aiResult, { ex: 86400 });
           } catch {
             // ignore write failures on free tier
           }
@@ -218,6 +221,6 @@ export async function POST(request: NextRequest) {
 
   // 6. Fallback: cache template sentence so we don't keep calling Groq for same seed
   if (Math.random() < PRUNE_PROBABILITY) pruneCache();
-  responseCache.set(seedText, { caption: seedText, ts: now });
+  responseCache.set(cacheKey, { caption: seedText, ts: now });
   return NextResponse.json({ success: true, caption: seedText, source: "FALLBACK" });
 }
