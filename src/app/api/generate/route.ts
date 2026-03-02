@@ -154,30 +154,23 @@ export async function POST(request: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-      const subjectRule = isDuo
-        ? "Subject is LingOrm (the duo — two people). Use plural verbs. You may say 'LingOrm' or 'they'."
-        : `Subject is ONLY ${name}. Do NOT mention the other person or \"LingOrm\". Write about ${name} alone. Use singular verbs (e.g. \"she\", \"her\").`;
-
       const completion = await groq.chat.completions.create({
         messages: [
           { 
             role: "system", 
-            content: `You are a luxury fashion editor for Vogue. Rewrite the input into ONE elegant English sentence.
-
-            CRITICAL — WHO IS IN THE CAPTION:
-            ${subjectRule}
-
-            NAMING: Keep the subject name exactly as in the input. Never write "LingOrm Kwong" or "LingOrm Kornnaphat".
-
-            STYLE: Lingling Kwong → classic elegance, ethereal. Orm Kornnaphat → modern energy, bold charisma. LingOrm → iconic chemistry, combined power.
-
-            Output ONLY the text. No hashtags, no quotes.` 
+            content: `Vogue Editor. 
+            Task: Write ONE short, luxury sentence for LingOrm at Dior AW26.
+            STRICT RULES:
+            1. Length: UNDER 100 characters (This is vital).
+            2. Content: Must be over 25 characters.
+            3. Style: Iconic, chic, Parisian.
+            4. Subject: ${isDuo ? "LingOrm (plural)" : `${name} (singular)`}.` 
           },
-          { role: "user", content: `Rewrite (subject = ${name} only, do not add the other person or duo): ${seedText}` }
+          { role: "user", content: `Write a 80-character sentence for ${name} at Dior AW26.` }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 0.9,
-        presence_penalty: 1.5,
+        temperature: 0.7, 
+        max_tokens: 40, 
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
