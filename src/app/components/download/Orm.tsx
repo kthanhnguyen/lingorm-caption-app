@@ -14,7 +14,7 @@ function buildList(folder: string, count: number, prefix: string): ImageItem[] {
   });
 }
 
-const IMAGES = buildList("Orm", 6, "Orm");
+const IMAGES = buildList("Orm", 10, "Orm");
 
 export default function DownloadImagesOrm() {
   return (
