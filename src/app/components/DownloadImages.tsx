@@ -20,8 +20,8 @@ function buildList(folder: string, count: number, prefix: string): ImageItem[] {
 }
 
 const IMAGE_CATEGORIES = [
-  { id: 0, label: "LingOrm", images: buildList("LingOrm", 8, "LingOrm") },
-  { id: 1, label: "Ling", images: buildList("Ling", 6, "Ling") },
+  { id: 0, label: "LingOrm", images: buildList("LingOrm", 7, "LingOrm") },
+  { id: 1, label: "Ling", images: buildList("Ling", 7, "Ling") },
   { id: 2, label: "Orm", images: buildList("Orm", 6, "Orm") },
 ] as const;
 
