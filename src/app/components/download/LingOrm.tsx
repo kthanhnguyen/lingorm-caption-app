@@ -12,9 +12,9 @@ function buildList(folder: string, count: number, prefix: string): ImageItem[] {
       label: `${prefix}_${i + 1}`,
     };
   });
-}
+} 
 
-const IMAGES = buildList("LingOrm", 11, "LingOrm");
+const IMAGES = buildList("LingOrm", 14, "LingOrm");
 
 export default function DownloadImagesLingOrm() {
   return (
