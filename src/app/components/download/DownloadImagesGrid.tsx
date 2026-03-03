@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 
 const CARD_CLASS =
@@ -23,6 +23,26 @@ export default function DownloadImagesGrid({
 }: DownloadImagesGridProps) {
   const [fullImage, setFullImage] = useState<{ src: string; label: string } | null>(null);
   const [fullImageLoaded, setFullImageLoaded] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsIOS(/iP(hone|ad|od)/.test(navigator.userAgent));
+    }
+  }, []);
+
+  // When full-size modal is open, prevent background scroll
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!fullImage) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [fullImage]);
 
   const preloadFullImage = useCallback((src: string) => {
     const img = new window.Image();
@@ -30,20 +50,27 @@ export default function DownloadImagesGrid({
   }, []);
 
   const handleDownload = async (src: string, label: string) => {
-    // iOS Safari does not honor the "download" attribute reliably and won't save to Photos
-    // Open the image in a new tab so the user can long‑press to "Save Image" into their album.
     const isIOS =
-      typeof navigator !== "undefined" &&
-      /iP(hone|ad|od)/.test(navigator.userAgent);
-
-    if (isIOS) {
-      window.open(src, "_blank");
-      return;
-    }
+      typeof navigator !== "undefined" && /iP(hone|ad|od)/.test(navigator.userAgent);
 
     try {
       const res = await fetch(src);
       const blob = await res.blob();
+
+      // iOS Web Share API: lets user choose "Save Image" from the share sheet → Photos
+      const navAny = navigator as any;
+      if (isIOS && navAny.canShare && navAny.share) {
+        const file = new File([blob], `${label}.png`, { type: "image/png" });
+        if (navAny.canShare({ files: [file] })) {
+          await navAny.share({
+            files: [file],
+            title: label,
+          });
+          return;
+        }
+      }
+
+      // Desktop / Android (or iOS without Web Share files support): regular download
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -51,7 +78,9 @@ export default function DownloadImagesGrid({
       link.rel = "noopener noreferrer";
       link.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (error) {
+      console.error("Error downloading/sharing:", error);
+      // Fallback last resort: open image in new tab
       window.open(src, "_blank");
     }
   };
@@ -64,6 +93,12 @@ export default function DownloadImagesGrid({
       <p className="mb-4 text-sm text-white/80">
         {description}
       </p>
+      {isIOS && (
+        <p className="mt-2 text-[11px] text-white/70 mb-4">
+          On iPhone/iPad: you can click <span className="font-semibold">Download File</span> to open the share menu
+          (choose &quot;Save Image&quot;), or long press the image (view full size) and choose &quot;Save Image&quot; to add to Photos.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {imageList.map(({ id, src, label }) => (
           <div
@@ -102,49 +137,54 @@ export default function DownloadImagesGrid({
 
       {fullImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setFullImage(null)}
           role="dialog"
           aria-modal="true"
           aria-label="View full image"
         >
           <div
-            className="relative w-[min(90vw,42rem)] max-h-[90vh] flex flex-col items-center gap-4"
+            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col items-center gap-4 overflow-y-auto rounded-xl bg-black/20 p-4"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close button, pinned inside modal */}
             <button
               type="button"
               onClick={() => setFullImage(null)}
-              className="absolute -top-10 right-0 rounded-full bg-white/20 p-2 text-white hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white"
-              aria-label="Close"
+              className="absolute top-3 right-3 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white hover:bg-white/25"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ✕
             </button>
-            <div className="relative h-[75vh] w-full min-w-0 overflow-hidden rounded-lg bg-white/5">
-              {!fullImageLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                </div>
-              )}
-              <Image
+
+            {/* Image area */}
+            <div className="mt-6 flex w-full justify-center">
+              {/* Hint for saving */}
+              <p className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] text-white/60 uppercase whitespace-nowrap">
+                Long press the image to save to your library
+              </p>
+
+              <img
                 src={fullImage.src}
                 alt={fullImage.label}
-                fill
-                className={`object-contain transition-opacity duration-200 ${fullImageLoaded ? "opacity-100" : "opacity-0"}`}
-                sizes="(max-width: 768px) 90vw, 672px"
-                loading="eager"
+                className="max-h-[75vh] w-auto object-contain rounded-lg shadow-2xl select-none"
+                style={{
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "default",
+                }}
                 onLoad={() => setFullImageLoaded(true)}
+                onContextMenu={(e) => e.stopPropagation()}
               />
             </div>
-            <p className="text-sm font-medium text-white/90">{fullImage.label}</p>
+
+            <p className="mt-2 text-sm font-medium text-white">{fullImage.label}</p>
+
+            {/* Download button for Android/PC, still available on iOS */}
             <button
               type="button"
               onClick={() => handleDownload(fullImage.src, fullImage.label)}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-gray-100"
+              className="mt-1 rounded-full bg-white px-6 py-2 text-sm font-bold text-black shadow-md hover:bg-gray-100"
             >
-              Download
+              Download File
             </button>
           </div>
         </div>
