@@ -7,15 +7,17 @@ import type { Category } from "../../types";
 
 // --- X (Twitter) ---
 export const X_TAGS: Record<Exclude<Category, "lingorm">, string> = {
-  ling: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook \n#LinglingKwong #LingOrm \n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak",
-  orm: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook \n#OrmKornnaphat #LingOrm \n#Dior #DiorAW26 #PFW\n@Dior @ormmormm",
+  ling: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#LinglingKwong #LingOrm \n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak",
+  orm: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#OrmKornnaphat #LingOrm \n#Dior #DiorAW26 #PFW\n@Dior @ormmormm",
 };
 
 export const X_LINGORM_PRESETS = [
   // { id: "before", label: "Before 02 MAR 2026 3:30 PM BKK TIME", tags: "#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm", notes: "" },
   // { id: "airport", label: "Airport - 02 MAR 2026 3:30 PM BKK TIME", tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook", notes: "" },
-  { id: "airport-rank-1", label: "Airport - 02 MAR 2026 3:30 PM BKK TIME - After Rank #1", tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook\n#LinglingKwong #OrmKornnaphat #LingOrm\n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm", notes: "After hashtag #LingOrmDiorAW26APTLook rank 1 on X use this preset." },
-  { id: "during", label: "03 MAR 2026", tags: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#Dior #DiorAW26 #PFW\n#LinglingKwong #OrmKornnaphat #LingOrm \n@Dior @linglingsirilak @ormmormm", notes: "" },
+  // { id: "airport-rank-1", label: "Airport - 02 MAR 2026 3:30 PM BKK TIME - After Rank #1", tags: "LINGORM TAKEOFF TO DIORAW26\n#LingOrmDiorAW26APTLook\n#LinglingKwong #OrmKornnaphat #LingOrm\n#Dior #DiorAW26 #PFW\n@Dior @linglingsirilak @ormmormm", notes: "After hashtag #LingOrmDiorAW26APTLook rank 1 on X use this preset." },
+  { id: "during", label: "03 MAR 2026 7:00 PM BKK TIME", tags: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26", notes: "" },
+  { id: "during1", label: "03 MAR 2026 7:00 PM BKK TIME - After Rank #1", tags: "LINGORM BA DIOR AT PFW26 \n#LingOrmDiorAW26 \n#LinglingKwong #OrmKornnaphat\n#LingOrm #Dior #DiorAW26 #PFW \n@Dior @linglingsirilak @ormmormm", notes: "" },
+
 ] as const;
 
 // --- IG ---
