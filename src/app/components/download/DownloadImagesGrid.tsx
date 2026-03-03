@@ -30,6 +30,17 @@ export default function DownloadImagesGrid({
   }, []);
 
   const handleDownload = async (src: string, label: string) => {
+    // iOS Safari does not honor the "download" attribute reliably and won't save to Photos
+    // Open the image in a new tab so the user can long‑press to "Save Image" into their album.
+    const isIOS =
+      typeof navigator !== "undefined" &&
+      /iP(hone|ad|od)/.test(navigator.userAgent);
+
+    if (isIOS) {
+      window.open(src, "_blank");
+      return;
+    }
+
     try {
       const res = await fetch(src);
       const blob = await res.blob();
@@ -37,6 +48,7 @@ export default function DownloadImagesGrid({
       const link = document.createElement("a");
       link.href = url;
       link.download = `${label}.png`;
+      link.rel = "noopener noreferrer";
       link.click();
       URL.revokeObjectURL(url);
     } catch {
