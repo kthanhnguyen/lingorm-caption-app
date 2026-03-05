@@ -3,7 +3,7 @@
 import { buildList } from "./buildList";
 import DownloadImagesGrid from "./DownloadImagesGrid";
 
-const IMAGES = buildList("LingOrm", 21, "LingOrm", "desc");
+const IMAGES = buildList("LingOrm", 23, "LingOrm", "desc");
 
 export default function DownloadImagesLingOrm() {
   return (
