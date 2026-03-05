@@ -94,7 +94,7 @@ export default function DownloadImagesGrid({
     } catch (error) {
       console.error("Error downloading/sharing:", error);
       // Fallback last resort: open image in new tab
-      window.open(src, "_blank");
+      // window.open(src, "_blank");
     }
   };
 
