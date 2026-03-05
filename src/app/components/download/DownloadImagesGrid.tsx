@@ -8,11 +8,15 @@ const CARD_CLASS =
 
 export type ImageItem = { id: string; src: string; label: string };
 
+const DEFAULT_LAZY_STEP = 8;
+
 type DownloadImagesGridProps = {
   imageList: ImageItem[];
   title?: string;
   description?: string;
   footer?: string;
+  /** Show first N items, then "Load more". Omit to show all. */
+  initialVisible?: number;
 };
 
 export default function DownloadImagesGrid({
@@ -20,7 +24,16 @@ export default function DownloadImagesGrid({
   title = "Download images",
   description = "Download and use trending images for social media content.",
   footer = "Designed images by Kiu",
+  initialVisible,
 }: DownloadImagesGridProps) {
+  const step = initialVisible ?? DEFAULT_LAZY_STEP;
+  const [visibleCount, setVisibleCount] = useState(
+    initialVisible != null ? Math.min(initialVisible, imageList.length) : imageList.length
+  );
+  const useLazy = initialVisible != null && imageList.length > initialVisible;
+  const visibleList = useLazy ? imageList.slice(0, visibleCount) : imageList;
+  const hasMore = visibleCount < imageList.length;
+
   const [fullImage, setFullImage] = useState<{ src: string; label: string } | null>(null);
   const [fullImageLoaded, setFullImageLoaded] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -100,7 +113,7 @@ export default function DownloadImagesGrid({
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {imageList.map(({ id, src, label }) => (
+        {visibleList.map(({ id, src, label }) => (
           <div
             key={id}
             className="flex flex-col items-center gap-2 rounded-lg border border-white/20 bg-white/5 p-2"
@@ -134,6 +147,18 @@ export default function DownloadImagesGrid({
           </div>
         ))}
       </div>
+
+      {useLazy && hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((n) => Math.min(n + step, imageList.length))}
+            className="rounded-lg border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
+          >
+            Load more ({imageList.length - visibleCount} left)
+          </button>
+        </div>
+      )}
 
       {fullImage && (
         <div
